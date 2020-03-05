@@ -192,12 +192,12 @@
   #define EXPTP_PANDAPHYSX extern
 #endif
 
-#ifdef BUILDING_PANDASPEEDTREE
-  #define EXPCL_PANDASPEEDTREE __declspec(dllexport)
-  #define EXPTP_PANDASPEEDTREE
+#ifdef BUILDING_PANDARIB
+  #define EXPCL_PANDARIB __declspec(dllexport)
+  #define EXPTP_PANDARIB
 #else
-  #define EXPCL_PANDASPEEDTREE __declspec(dllimport)
-  #define EXPTP_PANDASPEEDTREE extern
+  #define EXPCL_PANDARIB __declspec(dllimport)
+  #define EXPTP_PANDARIB extern
 #endif
 
 #ifdef BUILDING_PANDASKEL
@@ -313,9 +313,6 @@
 
 #define EXPCL_PANDAPHYSX
 #define EXPTP_PANDAPHYSX
-
-#define EXPCL_PANDASPEEDTREE
-#define EXPTP_PANDASPEEDTREE
 
 #define EXPCL_PANDARIB
 #define EXPTP_PANDARIB

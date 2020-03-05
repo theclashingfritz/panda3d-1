@@ -55,14 +55,9 @@ find_all_webcams() {
   find_all_webcams_ds();
 #endif
 
-#ifdef HAVE_VIDEO4LINUX
+#ifdef IS_LINUX
   extern void find_all_webcams_v4l();
   find_all_webcams_v4l();
-#endif
-
-#if defined(HAVE_OPENCV) && !defined(HAVE_DIRECTCAM) && !defined(HAVE_VIDEO4LINUX)
-  extern void find_all_webcams_opencv();
-  find_all_webcams_opencv();
 #endif
 }
 

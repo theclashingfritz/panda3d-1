@@ -6,9 +6,7 @@ __all__ = ["Standalone", "Installer"]
 
 import os, sys, subprocess, tarfile, shutil, time, zipfile, glob
 from direct.directnotify.DirectNotifyGlobal import *
-from direct.showbase.AppRunnerGlobal import appRunner
-from pandac.PandaModules import PandaSystem, HTTPClient, Filename, VirtualFileSystem, Multifile
-from pandac.PandaModules import TiXmlDocument, TiXmlDeclaration, TiXmlElement, readXmlStream
+from pandac.PandaModules import PandaSystem, HTTPClient, Filename, VirtualFileSystem, Multifile, readXmlStream
 from direct.p3d.HostInfo import HostInfo
 
 class CachedFile:
@@ -29,7 +27,7 @@ class Standalone:
         
         hostDir = Filename(Filename.getTempDirectory(), 'pdeploy/')
         hostDir.makeDir()
-        self.host = HostInfo(PandaSystem.getPackageHostUrl(), appRunner = appRunner, hostDir = hostDir, asMirror = False, perPlatform = True)
+        self.host = HostInfo(PandaSystem.getPackageHostUrl(), appRunner = base.appRunner, hostDir = hostDir, asMirror = False, perPlatform = True)
         
         self.http = HTTPClient.getGlobalPtr()
         if not self.host.hasContentsFile:
@@ -63,9 +61,6 @@ class Standalone:
         
         if platform == None:
             platform = PandaSystem.getPlatform()
-        
-        vfs = VirtualFileSystem.getGlobalPtr()
-        
         for package in self.host.getPackages(name = "p3dembed", platform = platform):
             if not package.downloadDescFile(self.http):
                 Standalone.notify.warning("  -> %s failed for platform %s" % (package.packageName, package.platform))
@@ -80,7 +75,7 @@ class Standalone:
             else:
                 p3dembed = Filename(self.host.hostDir, "p3dembed/%s/p3dembed" % package.platform)
             
-            if not vfs.exists(p3dembed):
+            if not p3dembed.exists():
                 Standalone.notify.warning("  -> %s failed for platform %s" % (package.packageName, package.platform))
                 continue
             
@@ -109,11 +104,7 @@ class Standalone:
         output.makeDir()
         ohandle = open(output.toOsSpecific(), "wb")
         ohandle.write(p3dembed_data)
-        
-        # Write out the tokens. Set log_basename to the basename by default
-        tokens = {"log_basename" : self.basename}
-        tokens.update(self.tokens)
-        for token in tokens.items():
+        for token in self.tokens.items():
             ohandle.write("\0%s=%s" % token)
         ohandle.write("\0\0")
         
@@ -143,12 +134,11 @@ class Standalone:
             return []
         
         filenames = []
-        vfs = VirtualFileSystem.getGlobalPtr()
         for e in package.extracts:
             if e.basename not in ["p3dembed", "p3dembed.exe"]:
                 filename = Filename(package.getPackageDir(), e.filename)
                 filename.makeAbsolute()
-                if vfs.exists(filename):
+                if filename.exists():
                     filenames.append(filename)
                 else:
                     Standalone.notify.error("%s mentioned in xml, but does not exist" % e.filename)
@@ -197,16 +187,14 @@ class Installer:
                     self.requirements.append((p3dRequires.Attribute('name'), p3dRequires.Attribute('version')))
                     p3dRequires = p3dRequires.NextSiblingElement('requires')
 
-    def installPackagesInto(self, hostDir, platform):
+    def installPackagesInto(self, rootDir, platform):
         """ Installs the packages required by the .p3d file into
-        the specified directory, for the given platform. """
+        the specified root directory, for the given platform. """
         
         if not self.includeRequires:
             return
         
-        packages = []
-        
-        host = HostInfo(self.hostUrl, appRunner = appRunner, hostDir = hostDir, asMirror = False, perPlatform = False)
+        host = HostInfo(self.hostUrl, appRunner = base.appRunner, rootDir = rootDir, asMirror = True, perPlatform = False)
         if not host.hasContentsFile:
             if not host.readContentsFile():
                 if not host.downloadContentsFile(self.http):
@@ -215,17 +203,15 @@ class Installer:
         
         for name, version in self.requirements:
             package = host.getPackage(name, version, platform)
-            package.installed = True # Hack not to let it install itself
-            packages.append(package)
             if not package.downloadDescFile(self.http):
-                Installer.notify.warning("  -> %s failed for platform %s" % (package.packageName, package.platform))
+                Standalone.notify.warning("  -> %s failed for platform %s" % (package.packageName, package.platform))
                 continue
             if not package.downloadPackage(self.http):
-                Installer.notify.warning("  -> %s failed for platform %s" % (package.packageName, package.platform))
+                Standalone.notify.warning("  -> %s failed for platform %s" % (package.packageName, package.platform))
                 continue
         
         # Also install the 'images' package from the same host that p3dembed was downloaded from.
-        host = HostInfo(self.standalone.host.hostUrl, appRunner = appRunner, hostDir = hostDir, asMirror = False, perPlatform = False)
+        host = HostInfo(self.standalone.host.hostUrl, appRunner = base.appRunner, rootDir = rootDir, asMirror = False, perPlatform = False)
         if not host.hasContentsFile:
             if not host.readContentsFile():
                 if not host.downloadContentsFile(self.http):
@@ -233,71 +219,13 @@ class Installer:
                     return
         
         for package in host.getPackages(name = "images"):
-            package.installed = True # Hack not to let it install itself
-            packages.append(package)
             if not package.downloadDescFile(self.http):
-                Installer.notify.warning("  -> %s failed for platform %s" % (package.packageName, package.platform))
+                Standalone.notify.warning("  -> %s failed for platform %s" % (package.packageName, package.platform))
                 continue
             if not package.downloadPackage(self.http):
-                Installer.notify.warning("  -> %s failed for platform %s" % (package.packageName, package.platform))
+                Standalone.notify.warning("  -> %s failed for platform %s" % (package.packageName, package.platform))
                 continue
             break
-        
-        # Remove the extracted files from the compressed archive, to save space.
-        vfs = VirtualFileSystem.getGlobalPtr()
-        for package in packages:
-            if package.uncompressedArchive:
-                archive = Filename(package.getPackageDir(), package.uncompressedArchive.filename)
-                if not archive.exists():
-                    continue
-                
-                print archive
-                mf = Multifile()
-                # Make sure that it isn't mounted before altering it, just to be safe
-                vfs.unmount(archive)
-                if not mf.openRead(archive):
-                    Installer.notify.warning("Failed to open archive " + archive)
-                    continue
-                
-                # We don't iterate over getNumSubfiles because we're
-                # removing subfiles while we're iterating over them.
-                subfiles = mf.getSubfileNames()
-                for subfile in subfiles:
-                    # We do *NOT* call vfs.exists here in case the package is mounted.
-                    if Filename(package.getPackageDir(), subfile).exists():
-                        mf.removeSubfile(subfile)
-                
-                # This seems essential for mf.close() not to crash later.
-                mf.repack()
-                
-                # If we have no subfiles left, we can just remove the multifile.
-                if mf.getNumSubfiles() == 0:
-                    Installer.notify.info("Removing empty archive " + package.uncompressedArchive.filename)
-                    mf.close()
-                    archive.unlink()
-                else:
-                    mf.close()
-        
-        # Write out our own contents.xml file.
-        doc = TiXmlDocument()
-        decl = TiXmlDeclaration("1.0", "utf-8", "")
-        doc.InsertEndChild(decl)
-        
-        xcontents = TiXmlElement("contents")
-        for package in packages:
-            xpackage = TiXmlElement('package')
-            xpackage.SetAttribute('name', package.packageName)
-            if package.platform:
-                xpackage.SetAttribute('platform', package.platform)
-            if package.packageVersion:
-                xpackage.SetAttribute('version', version)
-                xpackage.SetAttribute('filename', package.packageName + "/" + package.packageVersion + "/" + package.descFileBasename)
-            else:
-                xpackage.SetAttribute('filename', package.packageName + "/" + package.descFileBasename)
-            xcontents.InsertEndChild(xpackage)
-
-        doc.InsertEndChild(xcontents)
-        doc.SaveFile(Filename(hostDir, "contents.xml").toOsSpecific())
 
     def buildAll(self, outputDir = "."):
         """ Creates a (graphical) installer for every known platform.
@@ -361,26 +289,45 @@ class Installer:
         print >>controlfile, "Description: %s" % self.fullname
         print >>controlfile, "Depends: libc6, libgcc1, libstdc++6, libx11-6, libssl0.9.8"
         controlfile.close()
+        postinst = open(Filename(tempdir, "postinst").toOsSpecific(), "w")
+        print >>postinst, "#!/bin/sh"
+        print >>postinst, "/usr/bin/%s --prep" % self.shortname.lower()
+        print >>postinst, "chmod -R 777 /usr/share/%s" % self.shortname.lower()
+        print >>postinst, "chmod -R 555 /usr/share/%s/hosts" % self.shortname.lower()
+        postinst.close()
+        os.chmod(Filename(tempdir, "postinst").toOsSpecific(), 0755)
+        postrmfile = open(Filename(tempdir, "postrm").toOsSpecific(), "w")
+        print >>postrmfile, "#!/bin/sh"
+        print >>postrmfile, "rm -rf /usr/share/%s" % self.shortname.lower()
+        postrmfile.close()
+        os.chmod(Filename(tempdir, "postrm").toOsSpecific(), 0755)
         Filename(tempdir, "usr/bin/").makeDir()
-        if self.includeRequires:
-            self.standalone.tokens["host_dir"] = "/usr/lib/" + self.shortname.lower()
-        elif "host_dir" in self.standalone.tokens:
-            del self.standalone.tokens["host_dir"]
+        self.standalone.tokens["root_dir"] = "/usr/share/" + self.shortname.lower()
         self.standalone.build(Filename(tempdir, "usr/bin/" + self.shortname.lower()), platform)
         if not self.licensefile.empty():
             Filename(tempdir, "usr/share/doc/%s/" % self.shortname.lower()).makeDir()
             shutil.copyfile(self.licensefile.toOsSpecific(), Filename(tempdir, "usr/share/doc/%s/copyright" % self.shortname.lower()).toOsSpecific())
-        hostDir = Filename(tempdir, "usr/lib/" + self.shortname.lower())
-        hostDir.makeDir()
-        self.installPackagesInto(hostDir, platform)
+        rootDir = Filename(tempdir, "usr/share/" + self.shortname.lower())
+        rootDir.makeDir()
+        Filename(rootDir, "log").makeDir()
+        Filename(rootDir, "prc").makeDir()
+        Filename(rootDir, "start").makeDir()
+        Filename(rootDir, "certs").makeDir()
+        self.installPackagesInto(rootDir, platform)
 
         # Create a control.tar.gz file in memory
         controlfile = Filename(tempdir, "control")
+        postinstfile = Filename(tempdir, "postinst")
+        postrmfile = Filename(tempdir, "postrm")
         controltargz = CachedFile()
         controltarfile = tarfile.TarFile.gzopen("control.tar.gz", "w", controltargz, 9)
         controltarfile.add(controlfile.toOsSpecific(), "control")
+        controltarfile.add(postinstfile.toOsSpecific(), "postinst")
+        controltarfile.add(postrmfile.toOsSpecific(), "postrm")
         controltarfile.close()
         controlfile.unlink()
+        postinstfile.unlink()
+        postrmfile.unlink()
 
         # Create the data.tar.gz file in the temporary directory
         datatargz = CachedFile()
@@ -405,7 +352,7 @@ class Installer:
         if (len(datatargz.str) & 1): debfile.write("\x0A")
         debfile.close()
         try:
-            appRunner.rmtree(tempdir)
+            base.appRunner.rmtree(tempdir)
         except:
             try: shutil.rmtree(tempdir.toOsSpecific())
             except: pass
@@ -420,14 +367,11 @@ class Installer:
         # Create the executable for the application bundle
         exefile = Filename(output, "Contents/MacOS/" + self.shortname)
         exefile.makeDir()
-        if self.includeRequires:
-            self.standalone.tokens["host_dir"] = "../Resources"
-        elif "host_dir" in self.standalone.tokens:
-            del self.standalone.tokens["host_dir"]
+        self.standalone.tokens["root_dir"] = "../Resources"
         self.standalone.build(exefile, platform)
-        hostDir = Filename(output, "Contents/Resources/")
-        hostDir.makeDir()
-        self.installPackagesInto(hostDir, platform)
+        rootDir = Filename(output, "Contents/Resources/")
+        rootDir.makeDir()
+        self.installPackagesInto(rootDir, platform)
         
         # Create the application plist file.
         # Although it might make more sense to use Python's plistlib module here,
@@ -566,6 +510,13 @@ class Installer:
         plist.write('</plist>\n')
         plist.close()
         
+        postflight = open(Filename(output, "Contents/Resources/postflight").toOsSpecific(), "w")
+        print >>postflight, '#!/bin/sh'
+        print >>postflight, 'chmod -R 777 "%s"' % appname
+        print >>postflight, 'chmod -R 755 "%s/hosts/"' % appname
+        postflight.close()
+        os.chmod(Filename(output, "Contents/Resources/postflight").toOsSpecific(), 0755)
+        
         if hasattr(tarfile, "PAX_FORMAT"):
             archive = tarfile.open(Filename(output, "Contents/Archive.pax.gz").toOsSpecific(), "w:gz", format = tarfile.PAX_FORMAT)
         else:
@@ -618,16 +569,13 @@ class Installer:
 
         exefile = Filename(Filename.getTempDirectory(), self.shortname + ".exe")
         exefile.unlink()
-        if self.includeRequires:
-            self.standalone.tokens["host_dir"] = "."
-        elif "host_dir" in self.standalone.tokens:
-            del self.standalone.tokens["host_dir"]
+        self.standalone.tokens["root_dir"] = "."
         self.standalone.build(exefile, platform)
         
-        # Temporary directory to store the hostdir in
-        hostDir = Filename.temporary("", self.shortname.lower() + "_exe_", "") + "/"
-        hostDir.makeDir()
-        self.installPackagesInto(hostDir, platform)
+        # Temporary directory to store the rootdir in
+        rootDir = Filename.temporary("", self.shortname.lower() + "_exe_", "") + "/"
+        rootDir.makeDir()
+        self.installPackagesInto(rootDir, platform)
 
         nsifile = Filename(Filename.getTempDirectory(), self.shortname + ".nsi")
         nsifile.unlink()
@@ -677,11 +625,11 @@ class Installer:
         for f in extrafiles:
             nsi.write('  File "%s"\n' % f.toOsSpecific())
         curdir = ""
-        for root, dirs, files in os.walk(hostDir.toOsSpecific()):
+        for root, dirs, files in os.walk(rootDir.toOsSpecific()):
             for name in files:
                 file = Filename.fromOsSpecific(os.path.join(root, name))
                 file.makeAbsolute()
-                file.makeRelativeTo(hostDir)
+                file.makeRelativeTo(rootDir)
                 outdir = file.getDirname().replace('/', '\\')
                 if curdir != outdir:
                     nsi.write('  SetOutPath "$INSTDIR\\%s"\n' % outdir)
@@ -722,8 +670,8 @@ class Installer:
 
         nsifile.unlink()
         try:
-            appRunner.rmtree(hostDir)
+            base.appRunner.rmtree(rootDir)
         except:
-            try: shutil.rmtree(hostDir.toOsSpecific())
+            try: shutil.rmtree(rootDir.toOsSpecific())
             except: pass
         return output

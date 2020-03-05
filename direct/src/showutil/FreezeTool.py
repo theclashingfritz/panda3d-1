@@ -7,7 +7,6 @@ import os
 import marshal
 import imp
 import platform
-import types
 from distutils.sysconfig import PREFIX, get_python_inc, get_python_version
 
 # Temporary (?) try..except to protect against unbuilt extend_frozen.
@@ -93,6 +92,8 @@ class CompilationEnvironment:
                 self.MSVC = os.environ['VCINSTALLDIR']
             elif (Filename('/c/Program Files/Microsoft Visual Studio 9.0/VC').exists()):
                 self.MSVC = Filename('/c/Program Files/Microsoft Visual Studio 9.0/VC').toOsSpecific()
+            elif (Filename('/c/Program Files (x86)/Microsoft Visual Studio 9.0/VC').exists()):
+                self.MSVC = Filename('/c/Program Files (x86)/Microsoft Visual Studio 9.0/VC').toOsSpecific()
             elif (Filename('/c/Program Files/Microsoft Visual Studio .NET 2003/Vc7').exists()):
                 self.MSVC = Filename('/c/Program Files/Microsoft Visual Studio .NET 2003/Vc7').toOsSpecific()
             else:
@@ -489,8 +490,6 @@ class Freezer:
 
             # The file on disk it was loaded from, if any.
             self.filename = filename
-            if isinstance(filename, types.StringTypes):
-                self.filename = Filename(filename)
 
             # True if the module was found via the modulefinder.
             self.implicit = implicit

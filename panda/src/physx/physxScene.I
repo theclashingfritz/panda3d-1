@@ -66,6 +66,6 @@ ls(ostream &out, int indent_level) const {
   _controllers.ls(out, indent_level);
   _vehicles.ls(out, indent_level);
   _cloths.ls(out, indent_level);
-  _softbodies.ls(out, indent_level);
+  //_softbodies.ls(out, indent_level);
 }
 

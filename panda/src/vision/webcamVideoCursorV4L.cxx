@@ -14,15 +14,13 @@
 
 #include "webcamVideoV4L.h"
 
-#ifdef HAVE_VIDEO4LINUX
+#ifdef IS_LINUX
 
-#include <fcntl.h>
 #include <sys/mman.h>
-#include <sys/ioctl.h>
 #include <linux/videodev.h>
 #include <linux/videodev2.h>
 
-#ifdef SUPPORT_WEBCAM_VIDEO_JPEG
+#ifdef HAVE_JPEG
 extern "C" {
   #include <jpeglib.h>
   #include <jpegint.h>
@@ -61,7 +59,7 @@ INLINE static void yuyv_to_rgbargba(unsigned char *dest, const unsigned char *sr
   dest[7] = (unsigned char) -1;
 }
 
-#if defined(SUPPORT_WEBCAM_VIDEO_JPEG) && !defined(CPPPARSER)
+#if defined(HAVE_JPEG) && !defined(CPPPARSER)
 
 struct my_error_mgr {
   struct jpeg_error_mgr pub;
@@ -139,9 +137,7 @@ WebcamVideoCursorV4L(WebcamVideoV4L *src) : MovieVideoCursor(src) {
   _ready = false;
   _format = (struct v4l2_format *) malloc(sizeof(struct v4l2_format));
   memset(_format, 0, sizeof(struct v4l2_format));
-#ifdef HAVE_JPEG
   _cinfo = NULL;
-#endif
   _buffers = NULL;
   _buflens = NULL;
   _fd = open(src->_device.c_str(), O_RDWR);
@@ -155,7 +151,7 @@ WebcamVideoCursorV4L(WebcamVideoV4L *src) : MovieVideoCursor(src) {
   _format->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   pvector<uint32_t>::iterator it;
   for (it = src->_pformats.begin(); it != src->_pformats.end(); ++it) {
-#ifdef SUPPORT_WEBCAM_VIDEO_JPEG
+#ifdef HAVE_JPEG
     if (*it == V4L2_PIX_FMT_MJPEG) {
       _format->fmt.pix.pixelformat = *it;
       break;
@@ -242,7 +238,7 @@ WebcamVideoCursorV4L(WebcamVideoV4L *src) : MovieVideoCursor(src) {
     vision_cat.error() << "Failed to stream from buffer!\n";
   }
 
-#ifdef SUPPORT_WEBCAM_VIDEO_JPEG
+#ifdef HAVE_JPEG
   // Initialize the JPEG library, if necessary
   if (_format->fmt.pix.pixelformat == V4L2_PIX_FMT_MJPEG) {
     _cinfo = (struct jpeg_decompress_struct *) malloc(sizeof(struct jpeg_decompress_struct));
@@ -269,7 +265,7 @@ WebcamVideoCursorV4L(WebcamVideoV4L *src) : MovieVideoCursor(src) {
 ////////////////////////////////////////////////////////////////////
 WebcamVideoCursorV4L::
 ~WebcamVideoCursorV4L() {
-#ifdef SUPPORT_WEBCAM_VIDEO_JPEG
+#ifdef HAVE_JPEG
   if (_cinfo != NULL) {
     jpeg_destroy_decompress(_cinfo);
     free(_cinfo);
@@ -320,7 +316,7 @@ fetch_into_buffer(double time, unsigned char *block, bool bgra) {
   unsigned char *buf = (unsigned char *) _buffers[vbuf.index];
 
   if (_format->fmt.pix.pixelformat == V4L2_PIX_FMT_MJPEG) {
-#ifdef SUPPORT_WEBCAM_VIDEO_JPEG
+#ifdef HAVE_JPEG
     nassertv(!bgra);
     struct my_error_mgr jerr;
     _cinfo->err = jpeg_std_error(&jerr.pub);

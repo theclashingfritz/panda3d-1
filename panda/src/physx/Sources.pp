@@ -30,11 +30,8 @@
     physxCapsuleForceFieldShapeDesc.I physxCapsuleForceFieldShapeDesc.h \
     physxCapsuleShape.I physxCapsuleShape.h \
     physxCapsuleShapeDesc.I physxCapsuleShapeDesc.h \
-    physxCloth.I physxCloth.h \
-    physxClothDesc.I physxClothDesc.h \
     physxClothMesh.I physxClothMesh.h \
     physxClothMeshDesc.I physxClothMeshDesc.h \
-    physxClothNode.I physxClothNode.h \
     physxConstraintDominance.I physxConstraintDominance.h \
     physxContactPair.I physxContactPair.h \
     physxContactPoint.I physxContactPoint.h \
@@ -84,7 +81,6 @@
     physxMemoryReadBuffer.h \
     physxMemoryWriteBuffer.h \
     physxMeshPool.I physxMeshPool.h \
-    physxMeshHash.I physxMeshHash.h \
     physxMotorDesc.I physxMotorDesc.h \
     physxObject.I physxObject.h \
     physxObjectCollection.I physxObjectCollection.h \
@@ -111,11 +107,6 @@
     physxSegment.I physxSegment.h \
     physxShape.I physxShape.h \
     physxShapeDesc.I physxShapeDesc.h \
-    physxSoftBody.I physxSoftBody.h \
-    physxSoftBodyDesc.I physxSoftBodyDesc.h \
-    physxSoftBodyMesh.I physxSoftBodyMesh.h \
-    physxSoftBodyMeshDesc.I physxSoftBodyMeshDesc.h \
-    physxSoftBodyNode.I physxSoftBodyNode.h \
     physxSphere.I physxSphere.h \
     physxSphereForceFieldShape.I physxSphereForceFieldShape.h \
     physxSphereForceFieldShapeDesc.I physxSphereForceFieldShapeDesc.h \
@@ -133,7 +124,7 @@
     physxVehicle.I physxVehicle.h \
     physxVehicleDesc.I physxVehicleDesc.h \
     physxWheel.I physxWheel.h \
-    physxWheelDesc.I physxWheelDesc.h \
+    physxWheelDesc.I physxWheel.h \
     physxWheelShape.I physxWheelShape.h \
     physxWheelShapeDesc.I physxWheelShapeDesc.h \
 
@@ -157,11 +148,8 @@
     physxCapsuleForceFieldShapeDesc.cxx \
     physxCapsuleShape.cxx \
     physxCapsuleShapeDesc.cxx \
-    physxCloth.cxx \
-    physxClothDesc.cxx \
     physxClothMesh.cxx \
     physxClothMeshDesc.cxx \
-    physxClothNode.cxx \
     physxConstraintDominance.cxx \
     physxContactPair.cxx \
     physxContactPoint.cxx \
@@ -211,7 +199,6 @@
     physxMemoryReadBuffer.cxx \
     physxMemoryWriteBuffer.cxx \
     physxMeshPool.cxx \
-    physxMeshHash.cxx \
     physxMotorDesc.cxx \
     physxObject.cxx \
     physxObjectCollection.cxx \
@@ -238,11 +225,6 @@
     physxSegment.cxx \
     physxShape.cxx \
     physxShapeDesc.cxx \
-    physxSoftBody.cxx \
-    physxSoftBodyDesc.cxx \
-    physxSoftBodyMesh.cxx \
-    physxSoftBodyMeshDesc.cxx \
-    physxSoftBodyNode.cxx \
     physxSphere.cxx \
     physxSphereForceFieldShape.cxx \
     physxSphereForceFieldShapeDesc.cxx \
@@ -284,11 +266,8 @@
     physxCapsuleForceFieldShapeDesc.I physxCapsuleForceFieldShapeDesc.h \
     physxCapsuleShape.I physxCapsuleShape.h \
     physxCapsuleShapeDesc.I physxCapsuleShapeDesc.h \
-    physxCloth.I physxCloth.h \
-    physxClothDesc.I physxClothDesc.h \
     physxClothMesh.I physxClothMesh.h \
     physxClothMeshDesc.I physxClothMeshDesc.h \
-    physxClothNode.I physxClothNode.h \
     physxConstraintDominance.I physxConstraintDominance.h \
     physxContactPair.I physxContactPair.h \
     physxContactPoint.I physxContactPoint.h \
@@ -338,7 +317,6 @@
     physxMemoryReadBuffer.h \
     physxMemoryWriteBuffer.h \
     physxMeshPool.I physxMeshPool.h \
-    physxMeshHash.I physxMeshHash.h \
     physxMotorDesc.I physxMotorDesc.h \
     physxObject.I physxObject.h \
     physxObjectCollection.I physxObjectCollection.h \
@@ -365,11 +343,6 @@
     physxSegment.I physxSegment.h \
     physxShape.I physxShape.h \
     physxShapeDesc.I physxShapeDesc.h \
-    physxSoftBody.I physxSoftBody.h \
-    physxSoftBodyDesc.I physxSoftBodyDesc.h \
-    physxSoftBodyMesh.I physxSoftBodyMesh.h \
-    physxSoftBodyMeshDesc.I physxSoftBodyMeshDesc.h \
-    physxSoftBodyNode.I physxSoftBodyNode.h \
     physxSphere.I physxSphere.h \
     physxSphereForceFieldShape.I physxSphereForceFieldShape.h \
     physxSphereForceFieldShapeDesc.I physxSphereForceFieldShapeDesc.h \
@@ -387,7 +360,7 @@
     physxVehicle.I physxVehicle.h \
     physxVehicleDesc.I physxVehicleDesc.h \
     physxWheel.I physxWheel.h \
-    physxWheelDesc.I physxWheelDesc.h \
+    physxWheelDesc.I physxWheel.h \
     physxWheelShape.I physxWheelShape.h \
     physxWheelShapeDesc.I physxWheelShapeDesc.h \
 

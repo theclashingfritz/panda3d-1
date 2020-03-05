@@ -31,12 +31,8 @@ class ObjectMgrBase:
         self.lastUid = ''
         self.lastUidMode = 0
         self.currNodePath = None   
+
         self.currLiveNP = None
-        
-        self.Actor = []
-        self.findActors(render)
-        self.Nodes = []
-        self.findNodes(render)
 
     def reset(self):
         base.direct.deselectAllCB()
@@ -54,8 +50,6 @@ class ObjectMgrBase:
         self.objects = {}
         self.npIndex = {}
         self.saveData = []
-        self.Actor = []
-        self.Nodes = []
 
     def genUniqueId(self):
         # [gjeon] to solve the problem of unproper $USERNAME
@@ -271,17 +265,6 @@ class ObjectMgrBase:
     def removeObjectById(self, uid):
         obj = self.findObjectById(uid)
         nodePath = obj[OG.OBJ_NP]
-        
-        for i in range(0,len(self.Actor)):
-            if self.Actor[i] == obj:
-                del self.Actor[i]
-                break
-        for i in range(0,len(self.Nodes)):
-            if self.Nodes[i][OG.OBJ_UID] == uid:
-                del self.Nodes[i]
-                break
-        self.editor.animMgr.removeAnimInfo(obj[OG.OBJ_UID])
-        
         del self.objects[uid]
         del self.npIndex[nodePath]
 
@@ -296,16 +279,6 @@ class ObjectMgrBase:
     def removeObjectByNodePath(self, nodePath):
         uid = self.npIndex.get(nodePath)
         if uid:
-            for i in range(0,len(self.Actor)):
-                if self.Actor[i][OG.OBJ_UID] == uid:
-                    del self.Actor[i]
-                    break
-            for i in range(0,len(self.Nodes)):
-                if self.Nodes[i][OG.OBJ_UID] == uid:
-                    del self.Nodes[i]
-                    break
-            self.editor.animMgr.removeAnimInfo(uid)
-            
             del self.objects[uid]
             del self.npIndex[nodePath]
 
@@ -907,27 +880,5 @@ class ObjectMgrBase:
     def flatten(self, newobjModel, model, objDef, uid):
         # override this to flatten models
         pass
-        
-    def findActors(self, parent):
-        for child in parent.getChildren():
-            if child.hasTag('OBJRoot') and not child.hasTag('Controller'):
-                obj = self.findObjectByNodePath(child)
 
-                if obj:
-                    if isinstance(obj[OG.OBJ_NP],Actor):
-                        self.Actor.append(obj)
-                    
-                self.findActors(child)
 
-        
-    def findNodes(self, parent):
-        for child in parent.getChildren():
-            if child.hasTag('OBJRoot') and not child.hasTag('Controller'):
-                obj = self.findObjectByNodePath(child)
-
-                if obj:
-                    self.Nodes.append(obj)
-                    
-                self.findActors(child)
-            
-                    

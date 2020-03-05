@@ -18,23 +18,14 @@
 
 // Platform-specific defines
 #ifdef WIN32
-#if _WIN64 || __amd64__
-#define NX64 1
-#else
 #define NX32 1
-#endif
 #endif
 
 #ifdef IS_LINUX
 #define LINUX 1
-#ifdef _LP64
-#define NX64 1
-#else
 #define NX32 1
-#endif
 #define CORELIB 1
 #define NX_DISABLE_FLUIDS 1
-#define NX_DISABLE_HARDWARE 1
 #endif
 
 #ifdef IS_FREEBSD

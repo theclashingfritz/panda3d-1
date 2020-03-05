@@ -74,14 +74,8 @@
 // PLATFORM variable, and help it to control the effects of functions
 // like $[os] and $[isfullpath].
 
-// True if we are specifically 32-bit Windows.
-#define WIN32_PLATFORM $[or $[eq $[PLATFORM],Win32],$[eq $[PLATFORM],Cygwin]]
-
-// True if we are 64-bit windows.
-#define WIN64_PLATFORM $[or $[eq $[PLATFORM],Win64],$[eq $[PLATFORM],Cygwin64]]
-
 // True if we are building on some flavor of Windows.
-#define WINDOWS_PLATFORM $[or $[WIN32_PLATFORM],$[WIN64_PLATFORM]]
+#define WINDOWS_PLATFORM $[or $[eq $[PLATFORM],Win32],$[eq $[PLATFORM],Cygwin]]
 
 // True if we are building on some flavor of OS X.
 #define OSX_PLATFORM $[eq $[PLATFORM],OSX]
@@ -315,11 +309,6 @@
 #set PHYSX_LIBS $[PHYSX_LIBS]
 #set HAVE_PHYSX $[HAVE_PHYSX]
 
-#set SPEEDTREE_IPATH $[unixfilename $[SPEEDTREE_IPATH]]
-#set SPEEDTREE_LPATH $[unixfilename $[SPEEDTREE_LPATH]]
-#set SPEEDTREE_LIBS $[SPEEDTREE_LIBS]
-#set HAVE_SPEEDTREE $[HAVE_SPEEDTREE]
-
 #set CHROMIUM_IPATH $[unixfilename $[CHROMIUM_IPATH]]
 #set CHROMIUM_LPATH $[unixfilename $[CHROMIUM_LPATH]]
 #set CHROMIUM_LIBS $[CHROMIUM_LIBS]
@@ -393,10 +382,6 @@
 
 #if $[HAVE_PHYSX]
   #define GENPYCODE_LIBS $[GENPYCODE_LIBS] libpandaphysx
-#endif
-
-#if $[HAVE_SPEEDTREE]
-  #define GENPYCODE_LIBS $[GENPYCODE_LIBS] libpandaspeedtree
 #endif
 
 #if $[HAVE_AWESOMIUM]

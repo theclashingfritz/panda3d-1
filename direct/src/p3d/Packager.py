@@ -40,7 +40,7 @@ class Packager:
                      explicit = False, compress = None, extract = None,
                      text = None, unprocessed = None,
                      executable = None, dependencyDir = None,
-                     platformSpecific = None, required = False):
+                     platformSpecific = None):
             assert isinstance(filename, Filename)
             self.filename = Filename(filename)
             self.newName = newName
@@ -53,7 +53,6 @@ class Packager:
             self.executable = executable
             self.dependencyDir = dependencyDir
             self.platformSpecific = platformSpecific
-            self.required = required
 
             if not self.newName:
                 self.newName = self.filename.cStr()
@@ -351,19 +350,12 @@ class Packager:
             self.sourceFilenames = {}
             self.targetFilenames = {}
 
-            # This is the set of files and modules that are
-            # required and may not be excluded from the package.
-            self.requiredFilenames = []
-            self.requiredModules = []
-
             # This records the current list of modules we have added so
             # far.
             self.freezer = FreezeTool.Freezer(platform = self.packager.platform)
 
         def close(self):
-            """ Writes out the contents of the current package.  Returns True
-            if the package was constructed successfully, False if one or more
-            required files or modules are missing. """
+            """ Writes out the contents of the current package. """
 
             if not self.p3dApplication and not self.packager.allowPackages:
                 message = 'Cannot generate packages without an installDir; use -i'
@@ -428,16 +420,14 @@ class Packager:
                         break
 
             if self.solo:
-                result = self.installSolo()
+                self.installSolo()
             else:
-                result = self.installMultifile()
+                self.installMultifile()
 
             if self.p3dApplication:
                 allowPythonDev = self.configs.get('allow_python_dev', 0)
                 if int(allowPythonDev):
                     print "\n*** Generating %s.p3d with allow_python_dev enabled ***\n" % (self.packageName)
-            
-            return result
 
 
         def considerPlatform(self):
@@ -482,16 +472,6 @@ class Packager:
                 # would make patching less efficient.
                 self.multifile.setRecordTimestamp(False)
 
-            # Make sure that all required files are present.
-            missing = []
-            for file in self.requiredFilenames:
-                if file not in self.files or file.isExcluded(self):
-                    missing.append(file.filename.getBasename())
-            if len(missing) > 0:
-                self.notify.warning("Cannot build package %s, missing required files: %r" % (self.packageName, missing))
-                self.cleanup()
-                return False
-
             self.extracts = []
             self.components = []
 
@@ -533,19 +513,6 @@ class Packager:
 
             # Pick up any unfrozen Python files.
             self.freezer.done()
-            
-            # But first, make sure that all required modules are present.
-            missing = []
-            for module in self.requiredModules:
-                if module not in self.freezer.modules.keys() or \
-                            self.freezer.modules[module].exclude:
-                    missing.append(module)
-            if len(missing) > 0:
-                self.notify.warning("Cannot build package %s, missing required modules: %r" % (self.packageName, missing))
-                self.cleanup()
-                return False
-            
-            # OK, we can add it.
             self.freezer.addToMultifile(self.multifile, self.compressionLevel)
             self.addExtensionModules()
 
@@ -731,7 +698,6 @@ class Packager:
                 self.packager.contentsChanged = True
 
             self.cleanup()
-            return True
 
         def installSolo(self):
             """ Installs the package as a "solo", which means we
@@ -799,7 +765,6 @@ class Packager:
             self.packager.contentsChanged = True
 
             self.cleanup()
-            return True
                
         def cleanup(self):
             # Now that all the files have been packed, we can delete
@@ -826,8 +791,6 @@ class Packager:
                 return None
 
             self.sourceFilenames[file.filename] = file
-            if file.required:
-                self.requiredFilenames.append(file)
 
             if file.text is None and not file.filename.exists():
                 if not file.isExcluded(self):
@@ -836,7 +799,6 @@ class Packager:
             
             self.files.append(file)
             self.targetFilenames[lowerName] = file
-
             return file
 
         def excludeFile(self, filename):
@@ -886,8 +848,7 @@ class Packager:
                         self.notify.warning("Unable to determine dependencies from %s" % (file.filename))
                         filenames = []
 
-                    # Extract the manifest file so we can figure out
-                    # the dependent assemblies.
+                    # Extract the manifest file so we can figure out the dependent assemblies.
                     tempFile = Filename.temporary('', 'p3d_', '.manifest')
                     resindex = 2
                     if file.filename.getExtension().lower() == "exe":
@@ -904,21 +865,6 @@ class Packager:
                     if tempFile.exists():
                         afilenames = self.__parseManifest(tempFile)
                         tempFile.unlink()
-
-                    # Also check for an explicit private-assembly
-                    # manifest file on disk.
-                    mfile = file.filename + '.manifest'
-                    if mfile.exists():
-                        if afilenames is None:
-                            afilenames = []
-                        afilenames += self.__parseManifest(mfile)
-                        # Since it's an explicit manifest file, it
-                        # means we should include the manifest
-                        # file itself in the package.
-                        newName = Filename(file.dependencyDir, mfile.getBasename())
-                        self.addFile(mfile, newName = newName.cStr(),
-                                     explicit = False, executable = True)
-                            
                     if afilenames is None and out != 31:
                         self.notify.warning("Unable to determine dependent assemblies from %s" % (file.filename))
 
@@ -1214,11 +1160,6 @@ class Packager:
                 path = DSearchPath(Filename(file.filename.getDirname()))
 
                 for filename in filenames:
-                    # These vDSO's provided by Linux aren't
-                    # supposed to be anywhere on the system.
-                    if filename in ["linux-gate.so.1", "linux-vdso.so.1"]:
-                        continue
-                    
                     filename = Filename.fromOsSpecific(filename)
                     filename.resolveFilename(path)
 
@@ -2413,17 +2354,12 @@ class Packager:
                         statements = classDef.__dict__.get('__statements', [])
                         if not statements:
                             self.notify.info("No files added to %s" % (name))
-                        for (lineno, stype, sname, args, kw) in statements:
+                        for (lineno, stype, name, args, kw) in statements:
                             if stype == 'class':
                                 raise PackagerError, 'Nested classes not allowed'
-                            self.__evalFunc(sname, args, kw)
+                            self.__evalFunc(name, args, kw)
                         package = self.endPackage()
-                        if package is not None:
-                            packages.append(package)
-                        elif packageNames is not None:
-                            # If the name is explicitly specified, this means
-                            # we should abort if the package faild to construct.
-                            raise PackagerError, 'Failed to construct %s' % name
+                        packages.append(package)
                 else:
                     self.__evalFunc(name, args, kw)
         except PackagerError:
@@ -2526,18 +2462,14 @@ class Packager:
         
     def endPackage(self):
         """ Closes the current package specification.  This actually
-        generates the package file.  Returns the finished package,
-        or None if the package failed to close (e.g. missing files). """
+        generates the package file.  Returns the finished package."""
 
         if not self.currentPackage:
             raise PackagerError, 'unmatched endPackage'
 
         package = self.currentPackage
         package.signParams += self.signParams[:]
-        
-        self.currentPackage = None
-        if not package.close():
-            return None
+        package.close()
 
         self.packageList.append(package)
         self.packages[(package.packageName, package.platform, package.version)] = package
@@ -2896,15 +2828,12 @@ class Packager:
         """ Adds the indicated Python module(s) to the current package. """
         self.addModule(args, **kw)
 
-    def addModule(self, moduleNames, newName = None, filename = None, required = False):
+    def addModule(self, moduleNames, newName = None, filename = None):
         if not self.currentPackage:
             raise OutsideOfPackageError
 
         if (newName or filename) and len(moduleNames) != 1:
             raise PackagerError, 'Cannot specify newName with multiple modules'
-
-        if required:
-            self.currentPackage.requiredModules += moduleNames
 
         for moduleName in moduleNames:
             self.currentPackage.freezer.addModule(moduleName, newName = newName, filename = filename)
@@ -2933,12 +2862,11 @@ class Packager:
             newName = moduleName
 
         if filename:
-            filename = Filename(filename)
             newFilename = Filename('/'.join(moduleName.split('.')))
             newFilename.setExtension(filename.getExtension())
             self.currentPackage.addFile(
                 filename, newName = newFilename.cStr(),
-                explicit = True, extract = True, required = True)
+                deleteTemp = True, explicit = True, extract = True)
 
         self.currentPackage.mainModule = (moduleName, newName)
 
@@ -2957,7 +2885,7 @@ class Packager:
 
         self.currentPackage.signParams.append((certificate, chain, pkey, password))
 
-    def do_setupPanda3D(self):
+    def do_setupPanda3D(self, p3dpythonName=None, p3dpythonwName=None):
         """ A special convenience command that adds the minimum
         startup modules for a panda3d package, intended for developers
         producing their own custom panda3d for download.  Should be
@@ -3022,9 +2950,20 @@ class Packager:
 
         else:
             # Anywhere else, we just ship the executable file p3dpython.exe.
-            self.do_file('p3dpython.exe')
+            if p3dpythonName is None:
+                p3dpythonName = 'p3dpython'
+            else:
+                self.do_config(p3dpython_name=p3dpythonName)
+            self.do_file('p3dpython.exe', newName=p3dpythonName+'.exe')
+
+            # The "Windows" executable appends a 'w' to whatever name is used
+            # above, unless an override name is explicitly specified.
             if self.platform.startswith('win'):
-                self.do_file('p3dpythonw.exe')
+                if p3dpythonwName is None:
+                    p3dpythonwName = p3dpythonName+'w'
+                else:
+                    self.do_config(p3dpythonw_name=p3dpythonwName)
+                self.do_file('p3dpythonw.exe', newName=p3dpythonwName+'.exe')
                 
         self.do_file('libp3dpython.dll')
 
@@ -3109,8 +3048,7 @@ class Packager:
 
     def addFiles(self, filenames, text = None, newName = None,
                  newDir = None, extract = None, executable = None,
-                 deleteTemp = False, literal = False,
-                 dependencyDir = None, required = False):
+                 deleteTemp = False, literal = False, dependencyDir = None):
 
         """ Adds the indicated arbitrary files to the current package.
 
@@ -3153,10 +3091,6 @@ class Packager:
         expanded.  If this is false, then .dll or .exe files will be
         renamed to .dylib and no extension on OSX (or .so on Linux);
         and glob characters will be expanded.
-        
-        If required is true, then the file is marked a vital part of
-        the package.  The package will not be built if this file
-        somehow cannot be added to the package.
         
         """
 
@@ -3238,7 +3172,7 @@ class Packager:
                 filename, newName = name, extract = extract,
                 explicit = explicit, executable = executable,
                 text = text, deleteTemp = deleteTemp,
-                dependencyDir = dependencyDir, required = required)
+                dependencyDir = dependencyDir)
 
     def do_exclude(self, filename):
         """ Marks the indicated filename as not to be included.  The

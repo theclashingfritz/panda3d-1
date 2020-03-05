@@ -505,6 +505,10 @@ set_p3d_filename(const string &p3d_filename, const int &p3d_offset) {
 ////////////////////////////////////////////////////////////////////
 void P3DInstance::
 set_wparams(const P3DWindowParams &wparams) {
+  if (is_failed()) {
+    return;
+  }
+
   bool prev_got_wparams = _got_wparams;
   _got_wparams = true;
   _wparams = wparams;
@@ -527,15 +531,7 @@ set_wparams(const P3DWindowParams &wparams) {
     } else {
       make_splash_window();
     }
-  }
-  
-  // It doesn't make much sense to go further than this point
-  // if the instance is already in the failed state.
-  if (is_failed()) {
-    return;
-  }
-  
-  if (_wparams.get_window_type() != P3D_WT_hidden) {
+    
 #ifdef __APPLE__
     // On Mac, we have to communicate the results of the rendering
     // back via shared memory, instead of directly parenting windows
@@ -1538,15 +1534,12 @@ uninstall_packages() {
   }
 
   // Also clean up the start directory, if we have a custom start dir.
-  // We won't do this if verify_contents is 'none'.
-  P3DInstanceManager *inst_mgr = P3DInstanceManager::get_global_ptr();
-  if (inst_mgr->get_verify_contents() != P3D_VC_never) {
-    string start_dir_suffix = get_start_dir_suffix();
-    if (!start_dir_suffix.empty()) {
-      string start_dir = inst_mgr->get_root_dir() + "/start" + start_dir_suffix;
-      nout << "Cleaning up start directory " << start_dir << "\n";
-      inst_mgr->delete_directory_recursively(start_dir);
-    }
+  string start_dir_suffix = get_start_dir_suffix();
+  if (!start_dir_suffix.empty()) {
+    P3DInstanceManager *inst_mgr = P3DInstanceManager::get_global_ptr();
+    string start_dir = inst_mgr->get_root_dir() + "/start" + start_dir_suffix;
+    nout << "Cleaning up start directory " << start_dir << "\n";
+    inst_mgr->delete_directory_recursively(start_dir);
   }
 
   return true;
@@ -2632,13 +2625,8 @@ void P3DInstance::
 set_failed() {
   set_button_image(IT_none);
   set_background_image(IT_failed);
-  _main_object->set_string_property("status", "failed");
-
-  if (!_failed) {
-    _failed = true;
-    make_splash_window();
-    send_notify("onfail");
-  }
+  _failed = true;
+  make_splash_window();
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -3014,7 +3002,6 @@ start_next_download() {
   while (_download_package_index < (int)_downloading_packages.size()) {
     P3DPackage *package = _downloading_packages[_download_package_index];
     if (package->get_failed()) {
-      send_notify("ondownloadfail");
       set_failed();
       return;
     }
@@ -3336,7 +3323,6 @@ report_package_done(P3DPackage *package, bool success) {
     report_package_progress(package, 1.0);
     start_next_download();
   } else {
-    send_notify("ondownloadfail");
     set_failed();
   }
 }
@@ -4094,7 +4080,6 @@ download_finished(bool success) {
     _inst->priv_set_p3d_filename(get_filename());
   } else {
     // Oops, no joy on the instance data.
-    _inst->send_notify("ondownloadfail");
     _inst->set_failed();
   }
 }

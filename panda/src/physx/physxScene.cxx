@@ -24,8 +24,6 @@
 #include "physxVehicleDesc.h"
 #include "physxCloth.h"
 #include "physxClothDesc.h"
-#include "physxSoftBody.h"
-#include "physxSoftBodyDesc.h"
 
 TypeHandle PhysxScene::_type_handle;
 
@@ -34,7 +32,7 @@ PStatCollector PhysxScene::_pcollector_update_transforms("App:PhysX:Update Trans
 PStatCollector PhysxScene::_pcollector_debug_renderer("App:PhysX:Debug Renderer");
 PStatCollector PhysxScene::_pcollector_simulate("App:PhysX:Simulate");
 PStatCollector PhysxScene::_pcollector_cloth("App:PhysX:Cloth");
-PStatCollector PhysxScene::_pcollector_softbody("App:PhysX:Softbody");
+//PStatCollector PhysxScene::_pcollector_softbody("App:PhysX:Softbody");
 
 ////////////////////////////////////////////////////////////////////
 //     Function: PhysxScene::link
@@ -139,13 +137,15 @@ unlink() {
   }
 
   // Unlink softbodies
-  NxSoftBody **softbodies = _ptr->getSoftBodies();
-  NxU32 nSoftbodies = _ptr->getNbSoftBodies();
+/*
+  NxSoftBody **sbs = _ptr->getSoftBodies();
+  NxU32 nSbs = _ptr->getNbSoftBodies();
 
-  for (NxU32 i=0; i < nSoftbodies; i++) {
-    PhysxSoftBody *softbody = (PhysxSoftBody *)softbodies[i]->userData;
-    softbody->unlink();
+  for (NxU32 i=0; i < nSbs; i++) {
+    PhysxSoftBody *sb = (PhysxSoftBody *)sb[i]->userData;
+    sb->unlink();
   }
+*/
 
   // Unlink materials
   NxMaterial *materials[5];
@@ -241,14 +241,7 @@ simulate(float dt) {
 void PhysxScene::
 fetch_results() {
 
-#ifdef NX64
-  cout << "<64bit>";
-#else
-  cout << "<32bit>";
-#endif
-
   nassertv(_error_type == ET_ok);
-  nassertv(_ptr != NULL);
 
   _pcollector_fetch_results.start();
   _ptr->fetchResults(NX_RIGID_BODY_FINISHED, true);
@@ -294,15 +287,15 @@ fetch_results() {
   _pcollector_cloth.stop();
 
   // Update softbody nodes
+/*
   _pcollector_softbody.start();
-
   NxSoftBody **softbodies = _ptr->getSoftBodies();
   for (NxU32 i=0; i < _ptr->getNbSoftBodies(); i++) {
     PT(PhysxSoftBody) softbody = (PhysxSoftBody *)softbodies[i]->userData;
     softbody->update();
   }
-
   _pcollector_softbody.stop();
+*/
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -955,57 +948,6 @@ get_cloth(unsigned int idx) const {
   NxCloth *clothPtr = cloths[idx];
 
   return (PhysxCloth *)(clothPtr->userData);
-}
-
-////////////////////////////////////////////////////////////////////
-//     Function: PhysxScene::get_num_soft_bodies
-//       Access: Published
-//  Description: Gets the number of soft bodies in the scene.
-////////////////////////////////////////////////////////////////////
-unsigned int PhysxScene::
-get_num_soft_bodies() const {
-
-  nassertr(_error_type == ET_ok, -1);
-  return _ptr->getNbSoftBodies();
-}
-
-////////////////////////////////////////////////////////////////////
-//     Function: PhysxScene::create_soft_body
-//       Access: Published
-//  Description: Creates a soft body in this scene.
-////////////////////////////////////////////////////////////////////
-PhysxSoftBody *PhysxScene::
-create_soft_body(PhysxSoftBodyDesc &desc) {
-
-  nassertr(_error_type == ET_ok, NULL);
-
-  PhysxSoftBody *softbody = new PhysxSoftBody();
-  nassertr(softbody, NULL);
-
-  NxSoftBody *softbodyPtr = _ptr->createSoftBody(desc._desc);
-  nassertr(softbodyPtr, NULL);
-
-  softbody->link(softbodyPtr);
-
-  return softbody;
-}
-
-////////////////////////////////////////////////////////////////////
-//     Function: PhysxScene::get_soft_body
-//       Access: Published
-//  Description: Returns the n-th soft body from the array of
-//               all the soft bodies in the scene.
-////////////////////////////////////////////////////////////////////
-PhysxSoftBody *PhysxScene::
-get_soft_body(unsigned int idx) const {
-
-  nassertr(_error_type == ET_ok, NULL);
-  nassertr_always(idx < _ptr->getNbSoftBodies(), NULL);
-
-  NxSoftBody **softbodies = _ptr->getSoftBodies();
-  NxSoftBody *softbodyPtr = softbodies[idx];
-
-  return (PhysxSoftBody *)(softbodyPtr->userData);
 }
 
 ////////////////////////////////////////////////////////////////////

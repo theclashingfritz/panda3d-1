@@ -229,11 +229,7 @@ event_handler(EventHandlerCallRef myHandler, EventRef event) {
 
   WindowRef window = NULL;
   GetEventParameter(event, kEventParamDirectObject, typeWindowRef, NULL, 
-                    sizeof(window), NULL, &window);
-
-  UInt32 attributes = 0;
-  GetEventParameter(event, kEventParamAttributes, typeUInt32, NULL,
-                    sizeof(attributes), NULL, &attributes);
+                    sizeof(WindowRef), NULL, &window);
 
   if (osxdisplay_cat.is_spam()) {
     osxdisplay_cat.spam()
@@ -278,23 +274,6 @@ event_handler(EventHandlerCallRef myHandler, EventRef event) {
     case kEventWindowShown: // called on initial show (not on un-minimize)
       if (window == FrontNonFloatingWindow ())
         SetUserFocusWindow (window);
-      break;
-
-    case kEventWindowBoundsChanging:
-      // Gives us a chance to intercept resize attempts
-      if (attributes & kWindowBoundsChangeSizeChanged) {
-        // If the window is supposed to be fixed-size, enforce this.
-        if (_properties.get_fixed_size()) {
-          Rect bounds;
-          GetEventParameter(event, kEventParamCurrentBounds,
-                            typeQDRectangle, NULL, sizeof(bounds), NULL, &bounds);
-          bounds.right = bounds.left + _properties.get_x_size();
-          bounds.bottom = bounds.top + _properties.get_y_size();
-          SetEventParameter(event, kEventParamCurrentBounds,
-                            typeQDRectangle, sizeof(bounds), &bounds);        
-          result = noErr;
-        }
-      }
       break;
 
     case kEventWindowBoundsChanged: // called for resize and moves (drag)
@@ -921,7 +900,7 @@ end_frame(FrameMode mode, Thread *current_thread) {
       // Draw a kludgey little resize box in the corner of the window,
       // so the user knows he's supposed to be able to drag the window
       // if he wants.
-      DisplayRegionPipelineReader dr_reader(_overlay_display_region, current_thread);
+      DisplayRegionPipelineReader dr_reader(_default_display_region, current_thread);
       _gsg->prepare_display_region(&dr_reader, Lens::SC_mono);
       DCAST(osxGraphicsStateGuardian, _gsg)->draw_resize_box();
     }
@@ -1160,48 +1139,49 @@ os_open_window(WindowProperties &req_properties) {
     _is_fullscreen =true; 
     full_screen_window = this;
     req_properties.clear_fullscreen();
-
   } else {
-    int x_origin = 10;
-    int y_origin = 50;
-    if (req_properties.has_origin()) { 
-      y_origin  = req_properties.get_y_origin();
-      x_origin = req_properties.get_x_origin();
-    }
-
-    int x_size = 512;
-    int y_size = 512;
-    if (req_properties.has_size()) {
-      x_size = req_properties.get_x_size();
-      y_size = req_properties.get_y_size();
-    }
-      
-    // A coordinate of -2 means to center the window on screen.
-    if (y_origin == -2 || x_origin == -2) {
-      if (y_origin == -2) {
-        y_origin = (_pipe->get_display_height() - y_size) / 2;
-      }
-      if (x_origin == -2) {
-        x_origin = (_pipe->get_display_width() - x_size) / 2;
-      }
-    }
-
-    // A coordinate of -1 means a default location.
-    if (y_origin == -1) {
-      y_origin = 50;
-    }
-    if (x_origin == -1) {
-      x_origin = 10;
-    }
-
-    _properties.set_origin(x_origin, y_origin);
-    _properties.set_size(x_size, y_size);
-
     Rect r;
-    r.top = y_origin;
-    r.left = x_origin;
-    r.right = r.left + x_size;
-    r.bottom = r.top + y_size;
+    if (req_properties.has_origin()) { 
+      r.top  = req_properties.get_y_origin();
+      r.left = req_properties.get_x_origin();
+      
+      // A coordinate of -2 means to center the window on screen.
+      if (r.top == -2 || r.left == -2) {
+        if (req_properties.has_size()) {
+          if (r.top == -2) {
+            r.top = 0.5 * (_pipe->get_display_height() - req_properties.get_y_size());
+          }
+          if (r.left == -2) {
+            r.left = 0.5 * (_pipe->get_display_width() - req_properties.get_x_size());
+          }
+        } else {
+          if (r.top == -2) {
+            r.top = 0.5 * (_pipe->get_display_height() - req_properties.get_y_size());
+          }
+          if (r.left == -2) {
+            r.left = 0.5 * (_pipe->get_display_width() - req_properties.get_x_size());
+          }
+        }
+        _properties.set_origin(r.left, r.top);
+      }
+      if (r.top == -1) {
+        r.top = 50;
+      }
+      if (r.left == -1) {
+        r.left = 10;
+      }
+    } else {
+      r.top = 50;
+      r.left = 10;
+    }
+    
+    if (req_properties.has_size()) {
+      r.right = r.left + req_properties.get_x_size();
+      r.bottom = r.top + req_properties.get_y_size();
+    } else { 
+      r.right = r.left + 512;
+      r.bottom = r.top + 512;
+    }
 
     /*
     if (req_properties.has_parent_window()) {
@@ -1220,11 +1200,6 @@ os_open_window(WindowProperties &req_properties) {
       }
       } else */
     {
-      int attributes = kWindowStandardDocumentAttributes | kWindowStandardHandlerAttribute;
-      if (req_properties.has_fixed_size() && req_properties.get_fixed_size()) {
-        attributes &= ~kWindowResizableAttribute;
-      }
-
       if (req_properties.has_undecorated() && req_properties.get_undecorated()) { 
         // create a unmovable .. no edge window..
           
@@ -1233,10 +1208,7 @@ os_open_window(WindowProperties &req_properties) {
             << "Creating undecorated window\n";
         }
  
-        // We don't want a resize box either.
-        attributes &= ~kWindowResizableAttribute;
-        attributes |= kWindowNoTitleBarAttribute;
-        CreateNewWindow(kDocumentWindowClass, attributes, &r, &_osx_window);
+        CreateNewWindow(kDocumentWindowClass, kWindowStandardDocumentAttributes | kWindowNoTitleBarAttribute, &r, &_osx_window);
       } else { 
         // create a window with crome and sizing and sucj
         // In this case, we want to constrain the window to the
@@ -1254,7 +1226,7 @@ os_open_window(WindowProperties &req_properties) {
           osxdisplay_cat.debug()  
             << "Creating standard window\n";
         }
-        CreateNewWindow(kDocumentWindowClass, attributes, &r, &_osx_window);
+        CreateNewWindow(kDocumentWindowClass, kWindowStandardDocumentAttributes | kWindowStandardHandlerAttribute, &r, &_osx_window);
         add_a_window(_osx_window);
       }
     }
@@ -1267,7 +1239,6 @@ os_open_window(WindowProperties &req_properties) {
         { kEventClassWindow, kEventWindowActivated },
         { kEventClassWindow, kEventWindowDeactivated },
         { kEventClassWindow, kEventWindowClose },
-        { kEventClassWindow, kEventWindowBoundsChanging },
         { kEventClassWindow, kEventWindowBoundsChanged },
         
         { kEventClassWindow, kEventWindowCollapsed },
@@ -1847,12 +1818,12 @@ do_reshape_request(int x_origin, int y_origin, bool has_origin,
   }
 
   // A coordinate of -2 means to center the window on screen.
-  if (x_origin == -2 || y_origin == -2 || x_origin == -1 || y_origin == -1) {
+  if (x_origin == -2 || y_origin == -2) {
     if (y_origin == -2) {
-      y_origin = (_pipe->get_display_height() - y_size) / 2;
+      y_origin = 0.5 * (_pipe->get_display_height() - y_size);
     }
     if (x_origin == -2) {
-      x_origin = (_pipe->get_display_width() - x_size) / 2;
+      x_origin = 0.5 * (_pipe->get_display_width() - x_size);
     }
     if (y_origin == -1) {
       y_origin = 50;

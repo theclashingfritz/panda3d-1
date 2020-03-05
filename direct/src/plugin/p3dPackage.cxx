@@ -229,12 +229,6 @@ remove_instance(P3DInstance *inst) {
 ////////////////////////////////////////////////////////////////////
 void P3DPackage::
 mark_used() {
-  P3DInstanceManager *inst_mgr = P3DInstanceManager::get_global_ptr();
-  if (inst_mgr->get_verify_contents() == P3D_VC_never) {
-    // We're not allowed to create any files in the package directory.
-    return;
-  }
-
   // Unlike the Python variant of this function, we don't mess around
   // with updating the disk space or anything.
   string filename = get_package_dir() + "/usage.xml";
@@ -410,12 +404,6 @@ download_contents_file() {
     return;
   }
 
-  // Don't download it if we're not allowed to.
-  if (inst_mgr->get_verify_contents() == P3D_VC_never) {
-    contents_file_download_finished(false);
-    return;
-  }
-
   // Download contents.xml to a temporary filename first, in case
   // multiple packages are downloading it simultaneously.
   if (_temp_contents_file != NULL) {
@@ -438,24 +426,17 @@ void P3DPackage::
 contents_file_download_finished(bool success) {
   P3DInstanceManager *inst_mgr = P3DInstanceManager::get_global_ptr();
   if (!_host->has_current_contents_file(inst_mgr)) {
-    if (!success || _temp_contents_file == NULL ||
-      !_host->read_contents_file(_temp_contents_file->get_filename(), true)) {
-      
-      if (_temp_contents_file) {
-        nout << "Couldn't read " << *_temp_contents_file << "\n";
-      }
+    if (!success || !_host->read_contents_file(_temp_contents_file->get_filename(), true)) {
+      nout << "Couldn't read " << *_temp_contents_file << "\n";
 
       // Maybe we can read an already-downloaded contents.xml file.
       string standard_filename = _host->get_host_dir() + "/contents.xml";
       if (_host->get_host_dir().empty() || 
           !_host->read_contents_file(standard_filename, false)) {
         // Couldn't even read that.  Fail.
-        nout << "Couldn't read " << standard_filename << "\n";
         report_done(false);
-        if (_temp_contents_file) {
-          delete _temp_contents_file;
-          _temp_contents_file = NULL;
-        }
+        delete _temp_contents_file;
+        _temp_contents_file = NULL;
         return;
       }
     }
@@ -463,10 +444,8 @@ contents_file_download_finished(bool success) {
     
   // The file is correctly installed by now; we can remove the
   // temporary file.
-  if (_temp_contents_file) {
-    delete _temp_contents_file;
-    _temp_contents_file = NULL;
-  }
+  delete _temp_contents_file;
+  _temp_contents_file = NULL;
 
   host_got_contents_file();
 }
@@ -498,12 +477,6 @@ redownload_contents_file(P3DPackage::Download *download) {
     // If the contents_iseq number has changed, we don't even need to
     // download anything--just go restart the download.
     host_got_contents_file();
-    return;
-  }
-  
-  // Don't download it if we're not allowed to.
-  P3DInstanceManager *inst_mgr = P3DInstanceManager::get_global_ptr();
-  if (inst_mgr->get_verify_contents() == P3D_VC_never) {
     return;
   }
   
@@ -553,10 +526,8 @@ contents_file_redownload_finished(bool success) {
   }
     
   // We no longer need the temporary file.
-  if (_temp_contents_file) {
-    delete _temp_contents_file;
-    _temp_contents_file = NULL;
-  }
+  delete _temp_contents_file;
+  _temp_contents_file = NULL;
 
   if (contents_changed) {
     // OK, the contents.xml has changed; this means we have to restart
@@ -629,10 +600,7 @@ host_got_contents_file() {
   }
 
   // Ensure the package directory exists; create it if it does not.
-  P3DInstanceManager *inst_mgr = P3DInstanceManager::get_global_ptr();
-  if (inst_mgr->get_verify_contents() != P3D_VC_never) {
-    mkdir_complete(_package_dir, nout);
-  }
+  mkdir_complete(_package_dir, nout);
   download_desc_file();
 }
 
@@ -677,8 +645,7 @@ download_desc_file() {
   local_desc_file.set_filename(_desc_file_basename);
   _desc_file_pathname = local_desc_file.get_pathname(_package_dir);
 
-  P3DInstanceManager *inst_mgr = P3DInstanceManager::get_global_ptr();
-  if (!local_desc_file.full_verify(_package_dir) && inst_mgr->get_verify_contents() != P3D_VC_never) {
+  if (!local_desc_file.full_verify(_package_dir)) {
     nout << _desc_file_pathname << " is stale.\n";
 
   } else {
@@ -694,13 +661,6 @@ download_desc_file() {
         return;
       }
     }
-  }
-
-  // Don't download it if we're not allowed to.
-  if (inst_mgr->get_verify_contents() == P3D_VC_never) {
-    nout << "Couldn't read " << _desc_file_pathname << "\n";
-    report_done(false);
-    return;
   }
 
   // The desc file is not current.  Go download it.
@@ -720,11 +680,8 @@ desc_file_download_finished(bool success) {
     return;
   }
 
-  P3DInstanceManager *inst_mgr = P3DInstanceManager::get_global_ptr();
-  if (inst_mgr->get_verify_contents() != P3D_VC_never) {
-    // Now that we've downloaded the desc file, make it read-only.
-    chmod(_desc_file_pathname.c_str(), 0444);
-  }
+  // Now that we've downloaded the desc file, make it read-only.
+  chmod(_desc_file_pathname.c_str(), 0444);
 
   if (_package_solo) {
     // No need to load it: the desc file *is* the package.
@@ -826,13 +783,6 @@ got_desc_file(TiXmlDocument *doc, bool freshly_downloaded) {
     }
 
     xrequires = xrequires->NextSiblingElement("requires");
-  }
-
-  if (inst_mgr->get_verify_contents() == P3D_VC_never) {
-    // This means we'll just leave it at this
-    // and assume that we're finished.
-    report_done(true);
-    return;
   }
 
   // Get a list of all of the files in the directory, so we can remove
@@ -1258,10 +1208,6 @@ start_download(P3DPackage::DownloadType dtype, const string &urlbase,
                const string &pathname, const FileSpec &file_spec) {
   // Only one download should be active at a time
   assert(_active_download == NULL);
-  // This can't happen! If verify_contents is set to P3D_VC_never, we're
-  // not allowed to download anything, so we shouldn't get here
-  P3DInstanceManager *inst_mgr = P3DInstanceManager::get_global_ptr();
-  assert(inst_mgr->get_verify_contents() != P3D_VC_never);
 
   // We can't explicitly support partial downloads here, because
   // Mozilla provides no interface to ask for one.  We have to trust
@@ -1309,6 +1255,8 @@ start_download(P3DPackage::DownloadType dtype, const string &urlbase,
       download->_try_urls.push_back(url);
     }
   }
+
+  P3DInstanceManager *inst_mgr = P3DInstanceManager::get_global_ptr();
 
   if (dtype == DT_redownload_contents_file) {
     // When we're redownloading the contents file after a download

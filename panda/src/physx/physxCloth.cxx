@@ -83,19 +83,16 @@ release() {
 void PhysxCloth::
 update() {
 
-  if (_node) {
+  // Update node mesh data
+  _node->update();
 
-    // Update node mesh data
-    _node->update();
+  // Update node bounding volume
+  NxBounds3 bounds;
+  _ptr->getWorldBounds(bounds);
 
-    // Update node bounding volume
-    NxBounds3 bounds;
-    _ptr->getWorldBounds(bounds);
-
-    BoundingBox bb(PhysxManager::nxVec3_to_point3(bounds.min),
-                   PhysxManager::nxVec3_to_point3(bounds.max));
-    _node->set_bounds(&bb);
-  }
+  BoundingBox bb(PhysxManager::nxVec3_to_point3(bounds.min),
+                 PhysxManager::nxVec3_to_point3(bounds.max));
+  _node->set_bounds(&bb);
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -203,7 +200,7 @@ void PhysxCloth::
 set_thickness(float thickness) {
 
   nassertv(_error_type == ET_ok);
-  _ptr->setThickness(thickness);
+  _ptr->setFriction(thickness);
 }
 
 ////////////////////////////////////////////////////////////////////

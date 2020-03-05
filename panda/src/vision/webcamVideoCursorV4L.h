@@ -17,15 +17,12 @@
 
 #include "pandabase.h"
 
-#ifdef HAVE_VIDEO4LINUX
+#ifdef IS_LINUX
 
 #include "webcamVideo.h"
 
 struct v4l2_format;
-
-// We can only decode a motion-jpeg stream if we have jpegint.h.
-#if defined(HAVE_JPEG) && defined(PHAVE_JPEGINT_H)
-#define SUPPORT_WEBCAM_VIDEO_JPEG 1
+#ifdef HAVE_JPEG
 struct jpeg_decompress_struct;
 #endif
 
@@ -69,6 +66,6 @@ private:
   static TypeHandle _type_handle;
 };
 
-#endif // HAVE_VIDEO4LINUX
+#endif // IS_LINUX
 
 #endif

@@ -17,7 +17,7 @@
 
 #include "pandabase.h"
 
-#ifdef HAVE_VIDEO4LINUX
+#ifdef IS_LINUX
 
 #include "webcamVideo.h"
 
@@ -55,6 +55,6 @@ private:
   static TypeHandle _type_handle;
 };
 
-#endif // HAVE_VIDEO4LINUX
+#endif // IS_LINUX
 
 #endif

@@ -101,11 +101,6 @@
 #else
 #print - Did not find Ageia PhysX
 #endif
-#if $[HAVE_SPEEDTREE]
-#print + SpeedTree
-#else
-#print - Did not find SpeedTree
-#endif
 #if $[HAVE_GTK]
 #print + gtk+-2
 #else
@@ -256,6 +251,9 @@ $[cdefine HAVE_FMODEX]
 /* Define if we have OpenAL installed. */
 $[cdefine HAVE_OPENAL]
 
+/* Define if we have Ageia PhysX SDK installed. */
+$[cdefine HAVE_PHYSX]
+
 /* Define if we have Freetype 2.0 or better available. */
 $[cdefine HAVE_FREETYPE]
 
@@ -277,14 +275,11 @@ $[cdefine HAVE_ARTOOLKIT]
 
 /* Define if we have OpenSSL installed.  */
 $[cdefine HAVE_OPENSSL]
+$[cdefine OPENSSL_097]
 $[cdefine REPORT_OPENSSL_ERRORS]
 
 /* Define if we have libjpeg installed.  */
 $[cdefine HAVE_JPEG]
-$[cdefine PHAVE_JPEGINT_H]
-
-/* Define to build video-for-linux. */
-$[cdefine HAVE_VIDEO4LINUX]
 
 /* Define if we have libpng installed.  */
 $[cdefine HAVE_PNG]
@@ -332,9 +327,6 @@ $[cdefine HAVE_CGDX9]
 
 /* Define if we have CGDX10 installed.  */
 $[cdefine HAVE_CGDX10]
-
-/* Define for dxerr.h instead of dxerr9.h. */
-$[cdefine USE_GENERIC_DXERR_LIBRARY]
 
 /* Define if we have zlib installed.  */
 $[cdefine HAVE_ZLIB]
@@ -389,9 +381,10 @@ $[cdefine HAVE_DX8]
 /* Define if we have DirectX installed and want to build for DX.  */
 $[cdefine HAVE_DX9]
 
-/* The choice of generic vs. the specific dxerr library largely
-   depends on which SDK you have installed. */
-$[cdefine USE_GENERIC_DXERR_LIBRARY]
+/* If we're building 64-bit, we want to use generic DirectX error libraries.  */
+#if $[eq $[USE_COMPILER],MSVC9x64]
+  $[cdefine USE_GENERIC_DXERR_LIBRARY]
+#endif
 
 /* Define if we want to build tinydisplay. */
 $[cdefine HAVE_TINYDISPLAY]

@@ -52,9 +52,6 @@
 #include "physxRevoluteJoint.h"
 #include "physxScene.h"
 #include "physxShape.h"
-#include "physxSoftBody.h"
-#include "physxSoftBodyMesh.h"
-#include "physxSoftBodyNode.h"
 #include "physxSphereForceFieldShape.h"
 #include "physxSphereShape.h"
 #include "physxSphericalJoint.h"
@@ -153,9 +150,6 @@ init_libphysx() {
   PhysxRevoluteJoint::init_type();
   PhysxScene::init_type();
   PhysxShape::init_type();
-  PhysxSoftBody::init_type();
-  PhysxSoftBodyMesh::init_type();
-  PhysxSoftBodyNode::init_type();
   PhysxSphereForceFieldShape::init_type();
   PhysxSphereShape::init_type();
   PhysxSphericalJoint::init_type();

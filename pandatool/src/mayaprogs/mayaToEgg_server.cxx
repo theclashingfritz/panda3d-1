@@ -316,7 +316,6 @@ run() {
   close_output();
   _verbose = 0;
   _polygon_tolerance = 0.01;
-  _polygon_output = 0;
   _transform_type = MayaToEggConverter::TT_model;
   _subsets.clear();
   _subroots.clear();

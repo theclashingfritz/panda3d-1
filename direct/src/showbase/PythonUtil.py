@@ -47,6 +47,7 @@ import random
 import time
 import new
 import gc
+import bisect
 #if __debug__:
 import traceback
 import __builtin__
@@ -56,7 +57,6 @@ import ElementTree as ET
 from HTMLParser import HTMLParser
 import BpDb
 import unicodedata
-import bisect
 
 __report_indent = 3
 
@@ -3120,6 +3120,8 @@ class FrameDelayedCall:
     def destroy(self):
         self._finished = True
         self._stopTask()
+        self._callback = None
+        self._cancelFunc = None
     def finish(self):
         if not self._finished:
             self._finished = True
@@ -3185,6 +3187,8 @@ class SubframeCall:
         if (self._taskName):
             taskMgr.remove(self._taskName)
             self._taskName = None
+    def isFinished(self):
+        return self._taskName == None
 
 class ArgumentEater:
     def __init__(self, numToEat, func):
@@ -4347,25 +4351,40 @@ def encodedUtf8(s):
 
 class PriorityCallbacks:
     """ manage a set of prioritized callbacks, and allow them to be invoked in order of priority """
+    TokenGen = SerialNumGen()
+
+    @classmethod
+    def GetToken(cls):
+        return 'pc-%s' % cls.TokenGen.next()
+
     def __init__(self):
         self._callbacks = []
+        self._token2item = {}
 
     def clear(self):
         while self._callbacks:
             self._callbacks.pop()
+        self._token2item = {}
 
     def add(self, callback, priority=None):
         if priority is None:
             priority = 0
         item = (priority, callback)
         bisect.insort(self._callbacks, item)
-        return item
+        token = self.GetToken()
+        self._token2item[token] = item
+        return token
 
-    def remove(self, item):
+    def remove(self, token):
+        item = self._token2item[token]
         self._callbacks.pop(bisect.bisect_left(self._callbacks, item))
 
+    def __contains__(self, token):
+        return token in self._token2item
+
     def __call__(self):
-        for priority, callback in self._callbacks:
+        callbacks = self._callbacks[:]
+        for priority, callback in callbacks:
             callback()
 
 if __debug__:
@@ -4414,6 +4433,16 @@ if __debug__:
     del c
     del pc
     del bItem
+
+def quantize(value, divisor):
+    # returns new value that is multiple of (1. / divisor)
+    return float(int(value * int(divisor))) / int(divisor)
+
+def quantizeVec(vec, divisor):
+    # in-place
+    vec[0] = quantize(vec[0], divisor)
+    vec[1] = quantize(vec[1], divisor)
+    vec[2] = quantize(vec[2], divisor)
 
 import __builtin__
 __builtin__.Functor = Functor

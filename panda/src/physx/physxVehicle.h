@@ -23,7 +23,6 @@
 
 class PhysxActor;
 class PhysxWheel;
-class PhysxVehicleDesc;
 class PhysxScene;
 
 ////////////////////////////////////////////////////////////////////

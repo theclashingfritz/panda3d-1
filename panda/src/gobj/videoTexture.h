@@ -45,16 +45,14 @@ public:
   virtual bool cull_callback(CullTraverser *trav, const CullTraverserData &data) const;
 
 protected:
-  void set_video_size(int video_width, int video_height);
+  INLINE void set_video_size(int video_width, int video_height);
 
   virtual bool do_has_ram_image() const;
 
   virtual void reconsider_dirty();
-  virtual void do_unlock_and_reload_ram_image(bool allow_compression);
-  virtual void do_reload_ram_image(bool allow_compression);
-  virtual bool do_can_reload();
+  virtual void do_reload_ram_image();
 
-  virtual void consider_update();
+  virtual INLINE void consider_update();
   INLINE void clear_current_frame();
   virtual void update_frame(int frame)=0;
 

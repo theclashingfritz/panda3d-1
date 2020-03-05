@@ -115,7 +115,7 @@
 // but you must put /usr/local/panda/lib (or $INSTALL_DIR/lib) on
 // your PYTHONPATH.
 
-// #define INSTALL_LIB_DIR /usr/lib/python2.6/site-packages
+// #define INSTALL_LIB_DIR /usr/lib/python2.2/site-packages
 
 
 // The character used to separate components of an OS-specific
@@ -319,7 +319,7 @@
 
 // Is Python installed, and should Python interfaces be generated?  If
 // Python is installed, which directory is it in?
-#define PYTHON_IPATH /usr/include/python2.6
+#define PYTHON_IPATH /usr/include/python2.4
 #define PYTHON_LPATH
 #define PYTHON_FPATH
 #define PYTHON_COMMAND python
@@ -335,7 +335,7 @@
 // genPyCode.  You may wish to add to this list to add your own
 // libraries, or if you want to use some of the more obscure
 // interfaces like libpandaegg and libpandafx.
-#defer GENPYCODE_LIBS libpandaexpress libpanda libpandaphysics libdirect libpandafx libp3vision $[if $[HAVE_ODE],libpandaode] 
+#defer GENPYCODE_LIBS libpandaexpress libpanda libpandaphysics libdirect libpandafx $[if $[HAVE_ODE],libpandaode] 
 
 // Normally, Python source files are copied into the INSTALL_LIB_DIR
 // defined above, along with the compiled C++ library objects, when
@@ -461,6 +461,8 @@
 #define OPENSSL_LPATH /usr/local/ssl/lib
 #define OPENSSL_LIBS ssl crypto
 #defer HAVE_OPENSSL $[libtest $[OPENSSL_LPATH],$[OPENSSL_LIBS]]
+// Redefine this to empty if your version of OpenSSL is prior to 0.9.7.
+#define OPENSSL_097 1
 
 // Define this true to include the OpenSSL code to report verbose
 // error messages when they occur.
@@ -471,14 +473,6 @@
 #define JPEG_LPATH
 #define JPEG_LIBS jpeg
 #defer HAVE_JPEG $[libtest $[JPEG_LPATH],$[JPEG_LIBS]]
-
-// Some versions of libjpeg did not provide jpegint.h.  Redefine this
-// to empty if you lack this header file.
-#define PHAVE_JPEGINT_H 1
-
-// Do you want to compile video-for-linux?  If you have an older Linux
-// system with incompatible headers, define this to empty string.
-#defer HAVE_VIDEO4LINUX $[IS_LINUX]
 
 // Is libpng installed, and where?
 #define PNG_IPATH
@@ -608,9 +602,9 @@
 #elif $[OSX_PLATFORM]
   #defer GL_FRAMEWORK OpenGL
 #else
-  #defer GL_LPATH /usr/X11R6/lib
-  #defer GL_LIBS GL
-  #defer GLU_LIBS GLU
+  #defer GL_LPATH /usr/lib64
+  #defer GL_LIBS /usr/lib64
+  #defer GLU_LIBS /usr/lib64
 #endif
 #defer HAVE_GL $[libtest $[GL_LPATH],$[GL_LIBS]]
 
@@ -658,10 +652,26 @@
 // or if you want to be able to easily switch between Mesa and the
 // system OpenGL implementation at runtime.  If you compiled Mesa with
 // USE_MGL_NAMESPACE defined, define MESA_MGL here.
-#define MESA_IPATH
-#define MESA_LPATH
-#define MESA_LIBS
-#define MESA_MGL
+#define MESA_IPATH /usr/include
+#define MESA_LPATH /usr/lib64
+#define MESA_LIBS /usr/lib64
+#define MESA_MGL 1
+#if $[WINDOWS_PLATFORM] 
+  #define MESA_IPATH
+  #define MESA_LPATH
+  #define MESA_LIBS
+  #define MESA_MGL
+#elif $[OSX_PLATFORM]
+  #define MESA_IPATH
+  #define MESA_LPATH
+  #define MESA_LIBS
+  #define MESA_MGL
+#else
+  #define MESA_IPATH /usr/include
+  #define MESA_LPATH /usr/lib64
+  #define MESA_LIBS /usr/lib64
+  #define MESA_MGL 1
+#endif
 #defer HAVE_MESA $[libtest $[MESA_LPATH],$[MESA_LIBS]]
 
 // Similar to MIN_GL_VERSION, above.
@@ -754,12 +764,6 @@
 #define DX9_LPATH
 #define DX9_LIBS d3d9.lib d3dx9.lib dxerr9.lib
 #defer HAVE_DX9 $[libtest $[DX9_LPATH],$[DX9_LIBS]]
-
-// Set this nonempty to use <dxerr.h> instead of <dxerr9.h>.  The
-// choice between the two is largely based on which version of the
-// DirectX SDK(s) you might have installed.  The generic library is
-// the default for 64-bit windows.
-#defer USE_GENERIC_DXERR_LIBRARY $[WIN64_PLATFORM]
 
 // Is OpenCV installed, and where?
 #define OPENCV_IPATH /usr/local/include/opencv
@@ -936,37 +940,10 @@
 #defer HAVE_OPENAL $[or $[OPENAL_FRAMEWORK],$[libtest $[OPENAL_LPATH],$[OPENAL_LIBS]]]
 
 // Info for the NVIDIA PhysX SDK
-#define PHYSX_IPATH /usr/include/PhysX/v2.8.3/SDKs/Cooking/include /usr/include/PhysX/v2.8.3/SDKs/Foundation/include /usr/include/PhysX/v2.8.3/SDKs/NxCharacter/include /usr/include/PhysX/v2.8.3/SDKs/Physics/include /usr/include/PhysX/v2.8.3/SDKs/PhysXLoader/include
-#define PHYSX_LPATH /usr/lib/PhysX/v2.8.3
+#define PHYSX_IPATH
+#define PHYSX_LPATH
 #define PHYSX_LIBS $[if $[WINDOWS_PLATFORM],PhysXLoader.lib NxCharacter.lib NxCooking.lib NxExtensions.lib,PhysXLoader NxCharacter NxCooking]
 #defer HAVE_PHYSX $[libtest $[PHYSX_LPATH],$[PHYSX_LIBS]]
-
-// Info for the SpeedTree tree and terrain rendering library.  This is
-// a commercial library that specializes in rendering trees and other
-// foliage.
-
-// This may be either "OpenGL" or "DirectX9".  Case is important, due
-// to the naming of the SpeedTree libraries.
-#define SPEEDTREE_API OpenGL
-// The local directory in which the SpeedTree SDK has been installed.
-#define SPEEDTREE_SDK_DIR
-// The default directory in which to find the SpeedTree installation at runtime.
-#defer SPEEDTREE_BIN_DIR $[SPEEDTREE_SDK_DIR]/Bin
-
-#defer SPEEDTREE_IPATH $[SPEEDTREE_SDK_DIR]/Include
-#defer SPEEDTREE_LPATH $[SPEEDTREE_SDK_DIR]/Lib/Windows/VC9$[if $[WIN64_PLATFORM],.x64]
-#defer SPEEDTREE_DEBUG $[if $[< $[OPTIMIZE], 3],_d]
-#defer SPEEDTREE_64 $[if $[WIN64_PLATFORM],64]
-
-// These names are used to build up the names of the SpeedTree libraries.
-#defer SPEEDTREE_VERSION 5.1
-#defer SPEEDTREE_LIB_SUFFIX _v$[SPEEDTREE_VERSION]_VC90MT$[SPEEDTREE_64]_Static$[SPEEDTREE_DEBUG].lib
-#if $[WINDOWS_PLATFORM]
-#defer SPEEDTREE_LIBS SpeedTreeCore$[SPEEDTREE_LIB_SUFFIX] SpeedTreeForest$[SPEEDTREE_LIB_SUFFIX] SpeedTree$[SPEEDTREE_API]Renderer$[SPEEDTREE_LIB_SUFFIX] SpeedTreeRenderInterface$[SPEEDTREE_LIB_SUFFIX] $[if $[eq $[SPEEDTREE_API],OpenGL],glew32.lib]
-#else
-#defer SPEEDTREE_LIBS
-#endif
-#defer HAVE_SPEEDTREE $[isdir $[SPEEDTREE_SDK_DIR]]
 
 // Info for http://www.sourceforge.net/projects/chromium
 #define CHROMIUM_IPATH /usr/include/chromium/include

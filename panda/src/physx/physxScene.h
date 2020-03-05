@@ -52,8 +52,6 @@ class PhysxVehicle;
 class PhysxVehicleDesc;
 class PhysxCloth;
 class PhysxClothDesc;
-class PhysxSoftBody;
-class PhysxSoftBodyDesc;
 
 ////////////////////////////////////////////////////////////////////
 //       Class : PhysxScene
@@ -140,12 +138,6 @@ PUBLISHED:
   PhysxCloth *create_cloth(PhysxClothDesc &desc);
   PhysxCloth *get_cloth(unsigned int idx) const;
   MAKE_SEQ(get_cloths, get_num_cloths, get_cloth);
-
-  // Soft bodies
-  unsigned int get_num_soft_bodies() const;
-  PhysxSoftBody *create_soft_body(PhysxSoftBodyDesc &desc);
-  PhysxSoftBody *get_soft_body(unsigned int idx) const;
-  MAKE_SEQ(get_soft_bodies, get_num_soft_bodies, get_soft_body);
 
   // Vehicles
   unsigned int get_num_vehicles() const;
@@ -238,7 +230,6 @@ public:
   PhysxObjectCollection<PhysxController> _controllers;
   PhysxObjectCollection<PhysxVehicle> _vehicles;
   PhysxObjectCollection<PhysxCloth> _cloths;
-  PhysxObjectCollection<PhysxSoftBody> _softbodies;
 
   PhysxMaterial *get_wheel_shape_material();
 
@@ -257,7 +248,7 @@ private:
   static PStatCollector _pcollector_debug_renderer;
   static PStatCollector _pcollector_simulate;
   static PStatCollector _pcollector_cloth;
-  static PStatCollector _pcollector_softbody;
+  //static PStatCollector _pcollector_softbody;
 
 ////////////////////////////////////////////////////////////////////
 public:

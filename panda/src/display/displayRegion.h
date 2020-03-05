@@ -37,7 +37,6 @@
 #include "pStatCollector.h"
 #include "cullTraverser.h"
 #include "callbackObject.h"
-#include "luse.h"
 
 class GraphicsOutput;
 class GraphicsPipe;
@@ -59,7 +58,8 @@ class CullTraverser;
 ////////////////////////////////////////////////////////////////////
 class EXPCL_PANDA_DISPLAY DisplayRegion : public DisplayRegionBase, public DrawableRegion {
 protected:
-  DisplayRegion(GraphicsOutput *window, const LVecBase4f &dimensions);
+  DisplayRegion(GraphicsOutput *window,
+                float l, float r, float b, float t);
 
 private:
   DisplayRegion(const DisplayRegion &copy);
@@ -73,13 +73,11 @@ public:
 
 PUBLISHED:
   INLINE void get_dimensions(float &l, float &r, float &b, float &t) const;
-  INLINE LVecBase4f get_dimensions() const;
   INLINE float get_left() const;
   INLINE float get_right() const;
   INLINE float get_bottom() const;
   INLINE float get_top() const;
-  INLINE void set_dimensions(float l, float r, float b, float t);
-  virtual void set_dimensions(const LVecBase4f &dimensions);
+  virtual void set_dimensions(float l, float r, float b, float t);
 
   INLINE GraphicsOutput *get_window() const;
   GraphicsPipe *get_pipe() const;
@@ -186,7 +184,10 @@ private:
       return DisplayRegion::get_class_type();
     }
 
-    LVecBase4f _dimensions;  // left, right, bottom, top
+    float _l;
+    float _r;
+    float _b;
+    float _t;
     
     int _pl;
     int _pr;
@@ -283,7 +284,6 @@ public:
   INLINE bool is_any_clear_active() const;
 
   INLINE void get_dimensions(float &l, float &r, float &b, float &t) const;
-  INLINE const LVecBase4f &get_dimensions() const;
   INLINE float get_left() const;
   INLINE float get_right() const;
   INLINE float get_bottom() const;
